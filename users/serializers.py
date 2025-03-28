@@ -55,13 +55,4 @@ class ProfileSerializer(serializers.ModelSerializer):
         fields = ['id', 'user', 'created_at', 'updated_at']
         read_only_fields = ['id', 'created_at', 'updated_at']
 
-class ChangePasswordSerializer(serializers.Serializer):
-    old_password = serializers.CharField(required=True)
-    new_password = serializers.CharField(required=True, validators=[validate_password])
-    confirm_password = serializers.CharField(required=True)
-    
-    def validate(self, attrs):
-        if attrs['new_password'] != attrs['confirm_password']:
-            raise serializers.ValidationError({"password": "Password fields didn't match."})
-        return attrs
 
