@@ -18,4 +18,3 @@ urlpatterns = [
     path('search/', UserSearchView.as_view(), name='user-search'),
     path('invitations/', my_invitations, name='my-invitations'),
 ]
-
