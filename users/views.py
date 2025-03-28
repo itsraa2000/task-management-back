@@ -1,6 +1,7 @@
 from rest_framework import generics, permissions, status
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.decorators import api_view, permission_classes
 from django.contrib.auth.models import User
 from django.db import models
 from .serializers import (
@@ -8,6 +9,7 @@ from .serializers import (
     ChangePasswordSerializer
 )
 from .models import Profile
+from tasks.models import BoardInvitation
 
 class RegisterView(generics.CreateAPIView):
     queryset = User.objects.all()
@@ -66,3 +68,18 @@ class UserSearchView(generics.ListAPIView):
                 models.Q(last_name__icontains=query)
             )
         return User.objects.none()
+
+@api_view(['GET'])
+@permission_classes([permissions.IsAuthenticated])
+def my_invitations(request):
+    """
+    Get all pending invitations for the current user
+    """
+    invitations = BoardInvitation.objects.filter(
+        invitee_email=request.user.email,
+        status='pending'
+    )
+    
+    from tasks.serializers import BoardInvitationSerializer
+    serializer = BoardInvitationSerializer(invitations, many=True)
+    return Response(serializer.data)
