@@ -8,8 +8,9 @@ This is the backend API for the Task Management application built with Django an
 - User registration and profile management
 - Task CRUD operations
 - Task filtering by status and priority
-- Collaboration features
 - Board management for team collaboration
+- User invitation system
+- Calendar view for tasks
 
 ## Setup
 
