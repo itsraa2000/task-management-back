@@ -6,7 +6,6 @@ from django.contrib.auth.models import User
 from django.db import models
 from .serializers import (
     UserSerializer, RegisterSerializer, ProfileSerializer, 
-    ChangePasswordSerializer
 )
 from .models import Profile
 from tasks.models import BoardInvitation
