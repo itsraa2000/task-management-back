@@ -89,15 +89,10 @@ class TaskViewSet(viewsets.ModelViewSet):
 class BoardViewSet(viewsets.ModelViewSet):
     serializer_class = BoardSerializer
     permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
-    filter_backends = [filters.SearchFilter, filters.OrderingFilter]
-    search_fields = ['name', 'description']
-    ordering_fields = ['created_at', 'name']
-    ordering = ['-created_at']
+    queryset = Board.objects.all()
     
     def get_queryset(self):
-        user = self.request.user
-        # Return boards that the user is a member of
-        return Board.objects.filter(members=user).distinct()
+        return Board.objects.filter(memberships__user=self.request.user).distinct()
     
     @action(detail=True, methods=['get'])
     def tasks(self, request, pk=None):

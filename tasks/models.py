@@ -1,12 +1,11 @@
-# tasks/models.py
-
 from django.db import models
 from django.contrib.auth.models import User
 
 class Board(models.Model):
     name = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
-    owner = models.ForeignKey(User, related_name="owned_boards", on_delete=models.CASCADE)
+    owner = models.ForeignKey(User, on_delete=models.CASCADE, related_name="owned_boards")
+    members = models.ManyToManyField(User, related_name="boards")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -15,7 +14,7 @@ class Board(models.Model):
 
     @property
     def task_count(self):
-        return self.board_tasks.count()  # related_name from Task model
+        return self.board_tasks.count() if self.board_tasks.exists() else 0  # Avoid errors
 
 class Task(models.Model):
     PRIORITY_CHOICES = [
@@ -63,19 +62,27 @@ class BoardMembership(models.Model):
 
     def __str__(self):
         return f"{self.user.username} - {self.board.name} ({self.role})"
-    
+
 class BoardInvitation(models.Model):
     invitee_email = models.EmailField()
-    role = models.CharField(
-        max_length=10,
-        choices=[('owner', 'Owner'), ('admin', 'Admin'), ('member', 'Member')],
-        default='member'
-    )
-    status = models.CharField(
-        max_length=10,
-        choices=[('pending', 'Pending'), ('accepted', 'Accepted'), ('declined', 'Declined')],
-        default='pending'
-    )
+    role = models.CharField(max_length=10, choices=[
+        ('owner', 'Owner'), 
+        ('admin', 'Admin'), 
+        ('member', 'Member')
+    ], default='member')
+
+    status = models.CharField(max_length=10, choices=[
+        ('pending', 'Pending'), 
+        ('accepted', 'Accepted'), 
+        ('declined', 'Declined')
+    ], default='pending')
+
     created_at = models.DateTimeField(auto_now_add=True)
     board = models.ForeignKey(Board, related_name='invitations', on_delete=models.CASCADE)
     inviter = models.ForeignKey(User, related_name='sent_invitations', on_delete=models.CASCADE)
+
+    class Meta:
+        unique_together = ('invitee_email', 'board')  # Prevent duplicate invites
+
+    def __str__(self):
+        return f"Invite to {self.invitee_email} for {self.board.name} ({self.status})"
