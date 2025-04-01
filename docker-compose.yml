@@ -6,15 +6,18 @@ services:
     command: >
       sh -c "python manage.py wait_for_db &&
              python manage.py migrate &&
-             python manage.py runserver 0.0.0.0:8000"
+             gunicorn --bind 0.0.0.0:8000 task_management.wsgi:application"
     volumes:
       - .:/app
     ports:
       - "8000:8000"
     environment:
-      - DEBUG=1
-      - SECRET_KEY=your-secret-key-here
-      - DATABASE_URL=postgresql://postgres:postgres@db:5432/taskmanagement
+      - DEBUG=0
+      - SECRET_KEY=${SECRET_KEY}
+      - DATABASE_URL=${DATABASE_URL}
+      - ALLOWED_HOSTS=${ALLOWED_HOSTS}
+      - CORS_ALLOWED_ORIGINS=${CORS_ALLOWED_ORIGINS}
+      - CSRF_TRUSTED_ORIGINS=${CSRF_TRUSTED_ORIGINS}
     depends_on:
       - db
 
@@ -26,6 +29,7 @@ services:
       - POSTGRES_DB=taskmanagement
       - POSTGRES_USER=postgres
       - POSTGRES_PASSWORD=postgres
+      - PGDATA=/var/lib/postgresql/data/pgdata
 
 volumes:
-  postgres_data: 
+  postgres_data:
