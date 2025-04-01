@@ -9,8 +9,8 @@ class TaskSerializer(serializers.ModelSerializer):
     board_id = serializers.PrimaryKeyRelatedField(
         source='board',
         queryset=Board.objects.all(),
-        required=True,
-        allow_null=False
+        required=False, 
+        allow_null=True 
     )
     board_name = serializers.CharField(source='board.name', read_only=True)
 
@@ -23,16 +23,15 @@ class TaskSerializer(serializers.ModelSerializer):
         ]
 
     def validate_board(self, board):
-        """Ensure the user is a member of the board before allowing task creation."""
+        """Ensure the user is a member of the board before assigning a task."""
         user = self.context['request'].user
-        if not BoardMembership.objects.filter(user=user, board=board).exists():
+        if board and not BoardMembership.objects.filter(user=user, board=board).exists():
             raise serializers.ValidationError("You are not a member of this board.")
         return board
 
     def create(self, validated_data):
         validated_data['owner'] = self.context['request'].user
         return super().create(validated_data)
-
 class BoardMembershipSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
     
@@ -45,10 +44,11 @@ class BoardSerializer(serializers.ModelSerializer):
     members = BoardMembershipSerializer(source='boardmembership_set', many=True, read_only=True)
     task_count = serializers.SerializerMethodField()
     description = serializers.CharField(required=False, allow_blank=True)
+    members_count = serializers.ReadOnlyField()
     
     class Meta:
         model = Board
-        fields = ['id', 'name', 'description', 'created_at', 'updated_at', 'owner', 'members', 'task_count']
+        fields = ['id', 'name', 'description', 'created_at', 'updated_at', 'owner', 'members', 'task_count' , 'members_count']
     
     def get_task_count(self, obj):
         try:

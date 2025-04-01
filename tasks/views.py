@@ -11,19 +11,15 @@ from .permissions import IsOwnerOrReadOnly, IsBoardMemberOrReadOnly
 
 class TaskViewSet(viewsets.ModelViewSet):
     serializer_class = TaskSerializer
-    permission_classes = [permissions.IsAuthenticated, IsOwnerOrReadOnly]
+    permission_classes = [permissions.IsAuthenticated, IsBoardMemberOrReadOnly]
     filter_backends = [filters.SearchFilter, filters.OrderingFilter]
     search_fields = ['title', 'description']
     ordering_fields = ['created_at', 'updated_at', 'priority', 'status', 'start_date', 'end_date']
     ordering = ['-created_at']
     
     def get_queryset(self):
-        user = self.request.user
-        # Return tasks that the user owns or collaborates on
-        return Task.objects.filter(
-            models.Q(owner=user) | models.Q(collaborators=user)
-        ).distinct()
-    
+        return Task.objects.all()
+
     @action(detail=False, methods=['get'])
     def calendar(self, request):
         """
@@ -67,6 +63,9 @@ class TaskViewSet(viewsets.ModelViewSet):
     @action(detail=True, methods=['post'])
     def add_collaborator(self, request, pk=None):
         task = self.get_object()
+        if not BoardMembership.objects.filter(user=request.user, board=task.board).exists():
+            return Response({"error": "Only board members can add collaborators"}, status=status.HTTP_403_FORBIDDEN)
+
         try:
             user_id = request.data.get('user_id')
             user = User.objects.get(id=user_id)
@@ -93,6 +92,18 @@ class BoardViewSet(viewsets.ModelViewSet):
     
     def get_queryset(self):
         return Board.objects.filter(memberships__user=self.request.user).distinct()
+    
+    def destroy(self, request, *args, **kwargs):
+        board = self.get_object()
+        
+        # Delete all related objects explicitly
+        board.board_tasks.all().delete()  # Delete all tasks under the board
+        board.memberships.all().delete()  # Delete all board memberships
+        board.invitations.all().delete()  # Delete all pending invitations
+        
+        board.delete()  # Finally, delete the board itself
+        
+        return Response({"message": "Board and all related data deleted successfully."}, status=status.HTTP_204_NO_CONTENT)
     
     @action(detail=True, methods=['get'])
     def tasks(self, request, pk=None):
@@ -205,70 +216,155 @@ class BoardViewSet(viewsets.ModelViewSet):
 class BoardInvitationViewSet(viewsets.ModelViewSet):
     serializer_class = BoardInvitationSerializer
     permission_classes = [permissions.IsAuthenticated]
-    
+
     def get_queryset(self):
+        """
+        Return invitations where the user is the inviter or the invitee.
+        """
         user = self.request.user
-        # Return invitations sent by the user
-        return BoardInvitation.objects.filter(inviter=user)
-    
+        return BoardInvitation.objects.filter(models.Q(inviter=user) | models.Q(invitee_email=user.email))
+
     @action(detail=True, methods=['post'])
     def accept(self, request, pk=None):
         """
-        Accept an invitation (for testing purposes)
-        In a real app, this would be handled via email links
+        Accept a board invitation.
         """
         invitation = self.get_object()
-        
-        # Check if the invitation is for the current user
+
+        # Ensure the invitation is for the current user
         if invitation.invitee_email != request.user.email:
             return Response(
-                {'error': 'This invitation is not for you'}, 
+                {'error': 'This invitation is not for you'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
         # Check if the invitation is still pending
         if invitation.status != 'pending':
             return Response(
-                {'error': f'Invitation has already been {invitation.status}'}, 
+                {'error': f'Invitation has already been {invitation.status}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
+        # Check if user already exists or create one
+        try:
+            user = User.objects.get(email=invitation.invitee_email)
+        except User.DoesNotExist:
+            return Response(
+                {'error': 'User account not found. Please register before accepting the invitation.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Ensure the user is not already a member
+        if BoardMembership.objects.filter(user=user, board=invitation.board).exists():
+            return Response(
+                {'error': 'User is already a member of this board'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
         # Add the user to the board
         BoardMembership.objects.create(
-            user=request.user,
+            user=user,
             board=invitation.board,
             role=invitation.role
         )
-        
+
         # Update the invitation status
         invitation.status = 'accepted'
         invitation.save()
-        
-        return Response({'status': 'invitation accepted'})
-    
+
+        return Response({'status': 'Invitation accepted'})
+
     @action(detail=True, methods=['post'])
     def decline(self, request, pk=None):
         """
-        Decline an invitation
+        Decline a board invitation.
         """
         invitation = self.get_object()
-        
-        # Check if the invitation is for the current user
+
+        # Ensure the invitation is for the current user
         if invitation.invitee_email != request.user.email:
             return Response(
-                {'error': 'This invitation is not for you'}, 
+                {'error': 'This invitation is not for you'},
                 status=status.HTTP_403_FORBIDDEN
             )
-        
+
         # Check if the invitation is still pending
         if invitation.status != 'pending':
             return Response(
-                {'error': f'Invitation has already been {invitation.status}'}, 
+                {'error': f'Invitation has already been {invitation.status}'},
                 status=status.HTTP_400_BAD_REQUEST
             )
-        
+
         # Update the invitation status
         invitation.status = 'declined'
         invitation.save()
-        
-        return Response({'status': 'invitation declined'})
+
+        return Response({'status': 'Invitation declined'})
+    
+    @action(detail=False, methods=['post'])
+    def invite(self, request):
+        """
+        Send an invitation to a user via email and automatically add them if they have an account.
+        """
+        user = request.user  # The inviter
+        board_id = request.data.get("board_id")
+        invitee_email = request.data.get("invitee_email")
+        role = request.data.get("role", "member")
+
+        if not board_id or not invitee_email:
+            return Response(
+                {"error": "Board ID and invitee email are required."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Ensure the board exists and the inviter is allowed to send invites
+        try:
+            board = Board.objects.get(id=board_id)
+        except Board.DoesNotExist:
+            return Response(
+                {"error": "Board not found."},
+                status=status.HTTP_404_NOT_FOUND
+            )
+
+        # Ensure inviter is a board member
+        if not BoardMembership.objects.filter(board=board, user=user).exists():
+            return Response(
+                {"error": "You do not have permission to invite users to this board."},
+                status=status.HTTP_403_FORBIDDEN
+            )
+
+        # Ensure invitee is not already a member
+        if BoardMembership.objects.filter(board=board, user__email=invitee_email).exists():
+            return Response(
+                {"error": "User is already a member of this board."},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+
+        # Check if the user already exists
+        try:
+            invitee = User.objects.get(email=invitee_email)
+            # If the user exists, add them directly to the board
+            BoardMembership.objects.create(user=invitee, board=board, role=role)
+            return Response(
+                {"message": "User added to the board successfully."},
+                status=status.HTTP_201_CREATED
+            )
+        except User.DoesNotExist:
+            # If the user does not exist, send an invitation
+            invitation, created = BoardInvitation.objects.get_or_create(
+                board=board,
+                inviter=user,
+                invitee_email=invitee_email,
+                defaults={"role": role, "status": "pending"},
+            )
+
+            if not created:
+                return Response(
+                    {"error": "An invitation has already been sent to this user."},
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+
+            return Response(
+                {"message": "Invitation sent successfully."},
+                status=status.HTTP_201_CREATED
+            )
