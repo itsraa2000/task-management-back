@@ -16,8 +16,14 @@ DEBUG = os.getenv("DEBUG", "False").lower() == "true"
 
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS", "").split(",") if not DEBUG else ["localhost", "127.0.0.1"]
 
-CORS_ALLOWED_ORIGINS = os.getenv("CORS_ALLOWED_ORIGINS", "").split(",") if not DEBUG else ["http://localhost:5173"]
-CSRF_TRUSTED_ORIGINS = os.getenv("CSRF_TRUSTED_ORIGINS", "").split(",") if not DEBUG else ["http://localhost:5173"]
+CORS_ALLOWED_ORIGINS = [
+    "https://task-management-front-kappa.vercel.app",
+    "http://localhost:5173",
+]
+CSRF_TRUSTED_ORIGINS = [
+    "https://task-management-front-kappa.vercel.app",
+    "http://localhost:5173",
+]
 
 CORS_ALLOW_CREDENTIALS = True
 CORS_ALLOW_ALL_ORIGINS = True
