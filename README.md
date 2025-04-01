@@ -27,10 +27,14 @@ task-management-back/
 │   ├── urls.py          # Main URL routing
 │   └── wsgi.py          # WSGI configuration
 ├── manage.py            # Django management script
-└── requirements.txt     # Project dependencies
+├── requirements.txt     # Project dependencies
+├── Dockerfile          # Docker configuration
+└── docker-compose.yml  # Docker Compose configuration
 ```
 
 ## Setup Instructions
+
+### Local Development Setup
 
 1. Clone the repository:
 ```bash
@@ -65,6 +69,25 @@ python manage.py migrate
 6. Start the development server:
 ```bash
 python manage.py runserver
+```
+
+### Docker Setup
+
+1. Build and start the containers:
+```bash
+docker-compose up --build
+```
+
+2. The application will be available at http://localhost:8000
+
+3. To stop the containers:
+```bash
+docker-compose down
+```
+
+4. To view logs:
+```bash
+docker-compose logs -f
 ```
 
 ## API Endpoints
@@ -115,4 +138,8 @@ python manage.py runserver
 3. Commit your changes
 4. Push to the branch
 5. Create a Pull Request
+
+## License
+
+This project is licensed under the MIT License - see the LICENSE file for details.
 
