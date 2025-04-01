@@ -1,4 +1,4 @@
-# Use Python 3.11 slim image as base
+# Use official Python slim image as base
 FROM python:3.11-slim
 
 # Set environment variables
@@ -18,7 +18,7 @@ RUN apt-get update && apt-get install -y \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy project
+# Copy project files
 COPY . .
 
 # Create a non-root user
@@ -28,5 +28,5 @@ USER appuser
 # Expose port
 EXPOSE 8000
 
-# Run the application
+# Run application with Gunicorn
 CMD ["gunicorn", "--bind", "0.0.0.0:8000", "task_management.wsgi:application"]
