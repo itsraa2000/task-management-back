@@ -18,7 +18,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
     
     def get_queryset(self):
-        return Task.objects.all()
+        user = self.request.user
+        return Task.objects.filter(board__memberships__user=user).distinct()
 
     @action(detail=False, methods=['get'])
     def calendar(self, request):
