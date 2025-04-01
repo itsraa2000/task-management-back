@@ -5,7 +5,7 @@ from .views import TaskViewSet, BoardViewSet, BoardInvitationViewSet
 router = DefaultRouter()
 router.register(r'tasks', TaskViewSet, basename='tasks')
 router.register(r'boards', BoardViewSet, basename='boards')
-router.register(r'invitations', BoardInvitationViewSet, basename='invitation')
+router.register(r'invitations', BoardInvitationViewSet, basename='invitations')
 
 urlpatterns = [
     path('', include(router.urls)),

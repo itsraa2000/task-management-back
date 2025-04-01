@@ -15,6 +15,10 @@ class Board(models.Model):
     @property
     def task_count(self):
         return self.board_tasks.count() if self.board_tasks.exists() else 0  # Avoid errors
+    
+    @property
+    def members_count(self):
+        return self.memberships.count()
 
 class Task(models.Model):
     PRIORITY_CHOICES = [
@@ -40,7 +44,7 @@ class Task(models.Model):
 
     owner = models.ForeignKey(User, related_name='owned_tasks', on_delete=models.CASCADE)
     collaborators = models.ManyToManyField(User, related_name='collaborated_tasks', blank=True)
-    board = models.ForeignKey(Board, related_name='board_tasks', on_delete=models.SET_NULL, null=True, blank=True)
+    board = models.ForeignKey(Board, related_name='board_tasks', on_delete=models.CASCADE, null=True, blank=True)
 
     def __str__(self):
         return self.title
