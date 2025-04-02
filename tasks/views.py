@@ -18,7 +18,8 @@ class TaskViewSet(viewsets.ModelViewSet):
     ordering = ['-created_at']
     
     def get_queryset(self):
-        return Task.objects.all()
+        user = self.request.user
+        return Task.objects.filter(board__memberships__user=user).distinct()
 
     @action(detail=False, methods=['get'])
     def calendar(self, request):
@@ -55,10 +56,6 @@ class TaskViewSet(viewsets.ModelViewSet):
             return Response({'status': 'collaborator added'})
         except User.DoesNotExist:
             return Response({'error': 'User not found'}, status=status.HTTP_404_NOT_FOUND)
-    
-    @action(detail=False, methods=['get'])
-    def test_api(self, request):
-         return Response({"message": "API is working!"}, status=status.HTTP_200_OK)
 
 class BoardViewSet(viewsets.ModelViewSet):
     serializer_class = BoardSerializer
