@@ -115,18 +115,6 @@ SIMPLE_JWT = {
 
 CORS_ALLOW_CREDENTIALS = True
 
-CORS_ALLOW_ALL_ORIGINS = False
+CORS_ALLOWED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
 
-CORS_ALLOWED_ORIGINS = [
-    "https://taskmanage-git-main-itsraa2000s-projects.vercel.app",
-    "https://task-management-back-rt82.onrender.com",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173"
-]
-
-CSRF_TRUSTED_ORIGINS = [
-    "https://taskmanage-git-main-itsraa2000s-projects.vercel.app",
-    "https://task-management-back-rt82.onrender.com",
-    "http://localhost:5173",
-    "http://127.0.0.1:5173"
-]
+CSRF_TRUSTED_ORIGINS = os.getenv('CORS_ALLOWED_ORIGINS', 'http://localhost:5173').split(',')
