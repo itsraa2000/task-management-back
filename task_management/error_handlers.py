@@ -17,7 +17,7 @@ def custom_exception_handler(exc, context):
     
     # Handle login errors
     if hasattr(exc, 'detail') and isinstance(exc.detail, dict):
-        if 'detail' in exc.detail and 'No active account found with the given credentials' in str(exc.detail['detail']):
+        if 'detail' in exc.detail and 'Invalid username or password.' in str(exc.detail['detail']):
             return JsonResponse({
                 'error': 'Login Error',
                 'message': 'Invalid username or password.',
