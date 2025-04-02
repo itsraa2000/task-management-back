@@ -6,11 +6,11 @@ services:
     command: >
       sh -c "python manage.py wait_for_db &&
              python manage.py migrate || exit 1 &&
-             gunicorn --bind 0.0.0.0$PORT task_management.wsgi:application"
+             gunicorn --bind 0.0.0.0:8000 task_management.wsgi:application"
     volumes:
       - .:/app
     ports:
-      - "$PORT:$PORT"
+      - "8000:8000"
     environment:
       - DEBUG=0
       - SECRET_KEY=${SECRET_KEY}
